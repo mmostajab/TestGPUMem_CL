@@ -65,7 +65,7 @@ void main() {
   }*/
   dev_idx = 0;
   std::cout << "Device: " << cl->devices[dev_idx].features.device_name << std::endl;
-  bool use_gpu_mem = true;
+  bool use_gpu_mem = false;
   
   cl_kernel mykernel = cl->createKernel("testKernel.cl", "myKernel", cl->devices[dev_idx]);
 
@@ -107,10 +107,7 @@ void main() {
     //device_b = clCreateFromGLBuffer(cl->devices[dev_idx].ctx, CL_MEM_READ_ONLY, gl_buffer_b, &error);               cl->checkError(error);
     device_c = clCreateFromGLBuffer(cl->devices[dev_idx].ctx, CL_MEM_WRITE_ONLY, gl_buffer_c, &error);              cl->checkError(error);
 
-    glFinish();
-    //error = clEnqueueAcquireGLObjects(cl->devices[dev_idx].cmd_queue, 1, &device_a, 0, nullptr, nullptr); cl->checkError(error);
-    //error = clEnqueueAcquireGLObjects(cl->devices[dev_idx].cmd_queue, 1, &device_b, 0, nullptr, nullptr); cl->checkError(error);
-    error = clEnqueueAcquireGLObjects(cl->devices[dev_idx].cmd_queue, 1, &device_c, 0, nullptr, nullptr); cl->checkError(error);
+    
   }
 
   while (true){
@@ -127,6 +124,14 @@ void main() {
     float avg_time = 0.0f;
     const int n_tests = 100;
     for (size_t i = 0; i < n_tests; i++){
+
+      if (use_gpu_mem){
+        glFinish();
+        //error = clEnqueueAcquireGLObjects(cl->devices[dev_idx].cmd_queue, 1, &device_a, 0, nullptr, nullptr); cl->checkError(error);
+        //error = clEnqueueAcquireGLObjects(cl->devices[dev_idx].cmd_queue, 1, &device_b, 0, nullptr, nullptr); cl->checkError(error);
+        error = clEnqueueAcquireGLObjects(cl->devices[dev_idx].cmd_queue, 1, &device_c, 0, nullptr, nullptr); cl->checkError(error);
+      }
+
       clSetKernelArg(mykernel, 0, sizeof(cl_mem), &device_a);
       clSetKernelArg(mykernel, 1, sizeof(cl_mem), &device_c);
       clSetKernelArg(mykernel, 2, sizeof(cl_int), &mem_size);
