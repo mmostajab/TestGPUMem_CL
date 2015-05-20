@@ -69,9 +69,6 @@ void ClContext::init() {
 
     for (cl_uint d = 0; d < num_devices; d++){
 
-      //if (i == 1 && d == 0) continue;
-      if (d == 1) continue;
-
       platform_device_features[i][d] = getDeviceFeatures(platform_device[i][d]);
       ClDevice device;
       std::cout << "\t\t[" << d << "]\t" << platform_device_features[i][d].device_name << std::endl;
