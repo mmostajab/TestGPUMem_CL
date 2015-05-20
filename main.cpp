@@ -69,7 +69,7 @@ void main() {
   
   cl_kernel mykernel = cl->createKernel("testKernel.cl", "myKernel", cl->devices[dev_idx]);
 
-  cl_int mem_size = 4 * 1024 - 100;
+  cl_int mem_size = 4 * 1024;
   std::vector<cl_float4> host_a(mem_size), /*host_b(mem_size),*/ host_c(mem_size);
 
   for (size_t i = 0; i < mem_size; i++){
@@ -82,9 +82,9 @@ void main() {
 
 //#define USE_GPU_MEM
   cl_mem device_a, /*device_b,*/ device_c;
-  GLuint gl_buffer_a, gl_buffer_b, gl_buffer_c;
+  GLuint gl_buffer_a, gl_buffer_b, gl_buffer_c = 0;
 
-  if (use_gpu_mem){
+  if (!use_gpu_mem){
     device_a = clCreateBuffer(cl->devices[dev_idx].ctx, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, mem_size * sizeof(cl_float4), host_a.data(), &error); cl->checkError(error);
     //device_b = clCreateBuffer(cl->devices[dev_idx].ctx, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, mem_size * sizeof(cl_int), host_b.data(), &error); cl->checkError(error);
     device_c = clCreateBuffer(cl->devices[dev_idx].ctx, CL_MEM_WRITE_ONLY, 1000 * mem_size * sizeof(my_vertex), nullptr, &error); cl->checkError(error);
