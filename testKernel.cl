@@ -7,5 +7,6 @@ __kernel void myKernel(
   int thread_idx = get_global_id(0);
   if (thread_idx >= count) return;
 
-  c[thread_idx] = a[thread_idx]; 
+  c[thread_idx]  = a[thread_idx];
 }
+

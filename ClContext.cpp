@@ -1,8 +1,10 @@
 #include "ClContext.h"
 
 // Windows
-#include <windows.h>
-#include <wingdi.h>
+//#include <windows.h>
+//#include <wingdi.h>
+
+#define nullptr 0
 
 // STD
 #include <algorithm>
@@ -12,10 +14,12 @@
 // RPE
 #include "helper.h"
 
+#include <GL/glx.h>
+
 ClContext* ClContext::m_singleton = 0;
 ClContextDestructor ClContext::m_singleton_destructor;
 
-void ClContext::init() {
+void ClContext::init(Display** display, Window* win, GLXContext* ctx) {
   
   cl_int error = CL_SUCCESS;
   cl_uint num_platforms;
@@ -53,21 +57,24 @@ void ClContext::init() {
     platform_device_features[i].resize(num_devices);
     error = clGetDeviceIDs(platform[i], CL_DEVICE_TYPE_GPU, num_devices, platform_device[i].data(), nullptr);
 
-    // Context Properties for devices supporting opengl-opencl interoperatability.
-    cl_context_properties custom_props[] = {
-      // set platform
-      CL_CONTEXT_PLATFORM, (cl_context_properties)platform[i],
-
-      // set platform_device context
-      CL_WGL_HDC_KHR, (cl_context_properties)wglGetCurrentDC(),
-
-      // set current context
-      CL_GL_CONTEXT_KHR, (cl_context_properties)wglGetCurrentContext(),
-
-      0
-    };
-
     for (cl_uint d = 0; d < num_devices; d++){
+
+        std::cout << d << std::endl;
+
+
+        // Context Properties for devices supporting opengl-opencl interoperatability.
+        cl_context_properties custom_props[] = {
+          // set platform
+          CL_CONTEXT_PLATFORM, (cl_context_properties)platform[i],
+
+          // set platform_device context
+          CL_GLX_DISPLAY_KHR, (cl_context_properties)glXGetCurrentDisplay(),
+
+          // set current context
+          CL_GL_CONTEXT_KHR, (cl_context_properties) glXGetCurrentContext(),
+
+          0
+        };
 
       platform_device_features[i][d] = getDeviceFeatures(platform_device[i][d]);
       ClDevice device;
@@ -149,7 +156,7 @@ ClDeviceFeatures ClContext::getDeviceFeatures(cl_device_id device_id) {
 cl_kernel ClContext::createKernel(const std::string& file_name, const std::string& kernel_name, const ClDevice& device) {
   
   cl_int error = 0;
-  std::ifstream prog_file(file_name);
+  std::ifstream prog_file(file_name.c_str());
   if (!prog_file){
     std::cout << "Cannot open " << file_name << std::endl;
   }
@@ -158,22 +165,22 @@ cl_kernel ClContext::createKernel(const std::string& file_name, const std::strin
   cl_program prog = clCreateProgramWithSource(device.ctx, 1, &source_cstr, NULL, &error);  checkError(error);
   error = clBuildProgram(prog, 0, NULL, "-cl-fast-relaxed-math -DINTEG_METHOD_EULER", NULL, NULL);                              checkError(error);
 //  if (error != CL_SUCCESS){
-        std::ofstream build_log_file(file_name + "_build_" + device.features.device_name + ".log");
-    std::string build_log;
-    size_t build_log_len = 0;
+//        std::ofstream build_log_file(file_name + "_build_" + device.features.device_name + ".log");
+//    std::string build_log;
+//   size_t build_log_len = 0;
+//
+//    clGetProgramBuildInfo(prog, device.id, CL_PROGRAM_BUILD_LOG, 0, nullptr, &build_log_len);
+//    build_log.resize(build_log_len);
+//    clGetProgramBuildInfo(prog, device.id, CL_PROGRAM_BUILD_LOG, build_log_len, const_cast<char*>(build_log.data()), nullptr);
 
-    clGetProgramBuildInfo(prog, device.id, CL_PROGRAM_BUILD_LOG, 0, nullptr, &build_log_len);
-    build_log.resize(build_log_len);
-    clGetProgramBuildInfo(prog, device.id, CL_PROGRAM_BUILD_LOG, build_log_len, const_cast<char*>(build_log.data()), nullptr);
+//   std::cout << "File name: " << file_name << ", Build Log:\n" << build_log << std::endl;
 
-    std::cout << "File name: " << file_name << ", Build Log:\n" << build_log << std::endl;
-
-    if (build_log_file)
-      build_log_file << build_log << std::endl;
+//    if (build_log_file)
+//      build_log_file << build_log << std::endl;
 
     // STOP The application, if the kernel does not compile.
     // Due to crashes on nvidia gpu.
-    if (error != CL_SUCCESS) exit(0);
+//    if (error != CL_SUCCESS) exit(0);
 
   cl_kernel kernel = clCreateKernel(prog, kernel_name.c_str(), &error);                 checkError(error);
   
@@ -188,7 +195,7 @@ cl_kernel ClContext::createKernel(const std::string& file_name, const std::strin
   std::cout << "========================================================\n";
 
   cl_int error = 0;
-  std::ifstream prog_file(file_name);
+  std::ifstream prog_file(file_name.c_str());
   if (!prog_file){
     std::cout << "Cannot open " << file_name << std::endl;
   }
@@ -198,23 +205,23 @@ cl_kernel ClContext::createKernel(const std::string& file_name, const std::strin
   error = clBuildProgram(prog, 0, NULL, definitions.data(), NULL, NULL);                            checkError(error);
   cl_kernel kernel = clCreateKernel(prog, kernel_name.c_str(), &error);                             checkError(error);
   //if (error != CL_SUCCESS){
-    std::ofstream build_log_file(file_name + "_build_" + device.features.device_name + ".log");
-    std::string build_log;
-    size_t build_log_len = 0;
+  //  std::ofstream build_log_file(file_name + "_build_" + device.features.device_name + ".log");
+  //  std::string build_log;
+  //  size_t build_log_len = 0;
 
-    clGetProgramBuildInfo(prog, device.id, CL_PROGRAM_BUILD_LOG, 0, nullptr, &build_log_len);
-    build_log.resize(build_log_len);
-    clGetProgramBuildInfo(prog, device.id, CL_PROGRAM_BUILD_LOG, build_log_len, const_cast<char*>(build_log.data()), nullptr);
+  //  clGetProgramBuildInfo(prog, device.id, CL_PROGRAM_BUILD_LOG, 0, nullptr, &build_log_len);
+  //  build_log.resize(build_log_len);
+  //  clGetProgramBuildInfo(prog, device.id, CL_PROGRAM_BUILD_LOG, build_log_len, const_cast<char*>(build_log.data()), nullptr);
 
-    std::cout << "Build Log:\n" << build_log << std::endl;
+  //  std::cout << "Build Log:\n" << build_log << std::endl;
 
-    if (build_log_file)
-      build_log_file << build_log << std::endl;
+  //  if (build_log_file)
+  //    build_log_file << build_log << std::endl;
  // }
 
     // STOP The application, if the kernel does not compile.
     // Due to crashes on nvidia gpu.
-    if (error != CL_SUCCESS) exit(0);
+  //  if (error != CL_SUCCESS) exit(0);
 
     std::cout << "========================================================\n\n\n";
 

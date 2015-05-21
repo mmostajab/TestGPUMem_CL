@@ -4,6 +4,7 @@
 // STD
 #include <vector>
 #include <string>
+#define nullptr 0
 
 // CL
 #define CL_USE_DEPRECATED_OPENCL_2_0_APIS
@@ -11,6 +12,15 @@
 #define CL_USE_DEPRECATED_OPENCL_1_1_APIS
 #include <CL/cl.h>
 #include <CL/cl_gl.h>
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
+#include <GL/gl.h>
+#include <GL/glx.h>
 
 class ClContextDestructor;
 
@@ -37,7 +47,7 @@ class ClContext {
   friend class ClContextDestructor;
 public:
 
-  void init();
+  void init(Display** display, Window* win, GLXContext* ctx);
   cl_kernel createKernel(const std::string& file_name, const std::string& kernel_name, const ClDevice& device);
   cl_kernel createKernel(const std::string& file_name, const std::string& definitions, const std::string& kernel_name, const ClDevice& device);
 
