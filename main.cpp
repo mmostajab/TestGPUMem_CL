@@ -1,18 +1,24 @@
 #include <iostream>
 #include <time.h>
 #include <GL/glew.h>
-#include <GLFW/glfw3.h>
 
 #include "ClContext.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
-#include <GL/gl.h>
-#include <GL/glx.h>
+#ifdef _WIN32
+  #include <GLFW/glfw3.h>
+#elif _LINUX
+  #include <stdio.h>
+  #include <stdlib.h>
+  #include <string.h>
+  #include <unistd.h>
+  #include <X11/Xlib.h>
+  #include <X11/Xutil.h>
+  #include <GL/gl.h>
+  #include <GL/glx.h>
+#endif
+
+// BOOST
+#include <boost/thread.hpp>
 
 GLFWwindow* win[10];
 
@@ -24,9 +30,9 @@ void initGlfw(){
   int num_monitors = -1;
   GLFWmonitor** monitors = glfwGetMonitors(&num_monitors);
 
-  for(int i = num_monitors - 1;  i >= 0; i--){
+  for(int i = 0;  i < num_monitors; i++){
       // create the window
-      win[i] = glfwCreateWindow(600, 400, "TEST GPU Buffer", monitors[i], NULL);
+      win[i] = glfwCreateWindow(600, 400, "TEST GPU Buffer", NULL, NULL);
       if (!win[i])
       {
         glfwTerminate();
@@ -38,6 +44,8 @@ void initGlfw(){
   }
 
 }
+
+#ifdef _LINUX
 #define GLX_CONTEXT_MAJOR_VERSION_ARB       0x2091
 #define GLX_CONTEXT_MINOR_VERSION_ARB       0x2092
 typedef GLXContext (*glXCreateContextAttribsARBProc)(Display*, GLXFBConfig, GLXContext, Bool, const int*);
@@ -289,31 +297,35 @@ void initGlx(const char* display_str, Display* display, Window& win, GLXContext&
     printf( "Making context current\n" );
     glXMakeCurrent( display, win, ctx );
 }
+#endif
 
-int main() {
-
+void myThread(){
   cl_int error;
   int dev_idx = 0;
 
   ClContext* cl = ClContext::getSingletonPtr();
-  
-  //initGlfw();
+#ifdef _WIN32
+  initGlfw();
+  cl->init();
+#else
   const char* display_str[2] = { ":0.0", ":0.1" };
   Display* display[2];
   Window win[2];
   GLXContext ctx[2];
   initGlx(display_str[0], display[0], win[0], ctx[0]);
   //initGlx(display_str[1], display[1], win[1], ctx[1]);
-  int d= 1;
+  int d = 1;
   //glXMakeCurrent( display[d], win[d], ctx[d] );
   cl->init(display, win, ctx);
+#endif
+
   if (glewInit() != GLEW_OK){
     std::cout << "Cannot init Glew\n";
     exit(0);
   }
 
   std::cout << "\n\n\nChoose The Device: \t";
-  
+
   do{
     std::cin >> dev_idx;
   } while (dev_idx >= cl->devices.size());
@@ -332,7 +344,11 @@ int main() {
     use_gpu_mem = false;
   }
 
+#ifdef _WIN32 
+  cl_kernel mykernel = cl->createKernel("testKernel.cl", "myKernel", cl->devices[dev_idx]);
+#elif _LINUX
   cl_kernel mykernel = cl->createKernel("/home/smostaja/MultiGPUComputing/testKernel.cl", "myKernel", cl->devices[dev_idx]);
+#endif
 
   cl_int mem_size = 16 * 1024 * 1024;
   std::vector<cl_float4> host_a(mem_size), /*host_b(mem_size),*/ host_c(mem_size);
@@ -344,7 +360,7 @@ int main() {
     host_a[i].s[3] = 1.0f;
   }
 
-//#define USE_GPU_MEM
+  //#define USE_GPU_MEM
   cl_mem device_a, device_c;
   GLuint gl_buffer_c = 0;
 
@@ -395,7 +411,7 @@ int main() {
       clock_t beg_time = clock();
       //std::cout << "Beg Time: " << beg_time << std::endl;
       error = clEnqueueNDRangeKernel(cl->devices[dev_idx].cmd_queue, mykernel, 1, nullptr, &global_ws, &local_ws, 0, nullptr, nullptr); cl->checkError(error);
-      
+
 
       if (use_gpu_mem){
         error = clEnqueueReleaseGLObjects(cl->devices[dev_idx].cmd_queue, 1, &device_c, 0, nullptr, nullptr); cl->checkError(error);
@@ -415,6 +431,13 @@ int main() {
 
     std::cout << "Execution Time (Avg.)  = " << 1.0f / avg_time << std::endl;
   }
+}
+
+int main() {
+
+  boost::thread t(myThread);
+
+  t.join();
 
   return 0;
 }

@@ -14,13 +14,22 @@
 // RPE
 #include "helper.h"
 
-#include <GL/glx.h>
+#ifdef _WIN32
+  // Windows
+  #include <windows.h>
+  #include <wingdi.h>
+#elif _LINUX
+  #include <GL/glx.h>
+#endif
 
 ClContext* ClContext::m_singleton = 0;
 ClContextDestructor ClContext::m_singleton_destructor;
 
+#ifdef _WIN32
+void ClContext::init() {
+#elif _LINUX
 void ClContext::init(Display** display, Window* win, GLXContext* ctx) {
-  
+#endif
   cl_int error = CL_SUCCESS;
   cl_uint num_platforms;
   clGetPlatformIDs(0, nullptr, &num_platforms);
@@ -61,7 +70,21 @@ void ClContext::init(Display** display, Window* win, GLXContext* ctx) {
 
         std::cout << d << std::endl;
 
+#ifdef _WIN32
+        // Context Properties for devices supporting opengl-opencl interoperatability.
+        cl_context_properties custom_props[] = {
+          // set platform
+          CL_CONTEXT_PLATFORM, (cl_context_properties)platform[i],
 
+          // set platform_device context
+          CL_WGL_HDC_KHR, (cl_context_properties)wglGetCurrentDC(),
+
+          // set current context
+          CL_GL_CONTEXT_KHR, (cl_context_properties)wglGetCurrentContext(),
+
+          0
+        };
+#elif _LINUX
         // Context Properties for devices supporting opengl-opencl interoperatability.
         cl_context_properties custom_props[] = {
           // set platform
@@ -75,6 +98,7 @@ void ClContext::init(Display** display, Window* win, GLXContext* ctx) {
 
           0
         };
+#endif
 
       platform_device_features[i][d] = getDeviceFeatures(platform_device[i][d]);
       ClDevice device;

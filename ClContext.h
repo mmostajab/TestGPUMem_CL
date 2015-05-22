@@ -13,6 +13,7 @@
 #include <CL/cl.h>
 #include <CL/cl_gl.h>
 
+#ifdef _LINUX
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -21,6 +22,7 @@
 #include <X11/Xutil.h>
 #include <GL/gl.h>
 #include <GL/glx.h>
+#endif 
 
 class ClContextDestructor;
 
@@ -46,8 +48,11 @@ struct ClDevice {
 class ClContext {
   friend class ClContextDestructor;
 public:
-
+#ifdef _WIN32
+  void init();
+#elif _LINUX
   void init(Display** display, Window* win, GLXContext* ctx);
+#endif
   cl_kernel createKernel(const std::string& file_name, const std::string& kernel_name, const ClDevice& device);
   cl_kernel createKernel(const std::string& file_name, const std::string& definitions, const std::string& kernel_name, const ClDevice& device);
 
